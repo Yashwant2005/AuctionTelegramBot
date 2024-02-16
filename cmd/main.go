@@ -34,10 +34,6 @@ func main() {
 		log.Panic(err)
 	}
 
-	//var chatID int64 = -4199895727
-	var chatID int64 = viper.GetInt64("chat_id")
-	bot.Debug = true
-
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	updates := bot.GetUpdatesChan(tgbotapi.UpdateConfig{Timeout: 60})
@@ -63,6 +59,7 @@ func main() {
 				continue
 			}
 			if update.Message.IsCommand() {
+				chatID := update.Message.Chat.ID
 				switch update.Message.Command() {
 				case "start":
 					sender := update.Message.From.UserName
