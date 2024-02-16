@@ -2,6 +2,7 @@ package main
 
 import (
 	"AuctionBot/auction"
+	"AuctionBot/messages"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/spf13/viper"
 	"log"
@@ -33,7 +34,8 @@ func main() {
 		log.Panic(err)
 	}
 
-	var chatID int64 = -4199895727
+	//var chatID int64 = -4199895727
+	var chatID int64 = viper.GetInt64("chat_id")
 	bot.Debug = true
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
@@ -41,9 +43,9 @@ func main() {
 	updates := bot.GetUpdatesChan(tgbotapi.UpdateConfig{Timeout: 60})
 
 	auctionBids := make(chan tgbotapi.Update)
-	auctioneerMessages := make(chan tgbotapi.MessageConfig)
+	auctioneerMessages := make(chan tgbotapi.Chattable)
 
-	go func(messages chan tgbotapi.MessageConfig) {
+	go func(messages chan tgbotapi.Chattable) {
 		for {
 			select {
 			case message := <-messages:
@@ -65,18 +67,21 @@ func main() {
 				case "start":
 					sender := update.Message.From.UserName
 					if !IsAdmin(sender, adminUserLists) {
-						message := tgbotapi.NewMessage(chatID, "You are not allowed to start an auction")
+						message := tgbotapi.NewMessage(chatID, messages.NOT_ADMIN_MESSAGE)
+						message.ReplyToMessageID = update.Message.MessageID
 						bot.Send(message)
 						continue
 					}
 					if auction.GetActiveAuction() != nil {
-						message := tgbotapi.NewMessage(chatID, "There is already an active auction")
+						message := tgbotapi.NewMessage(chatID, messages.ACTIVE_AUCTION_EXISTS_MESSAGE)
+						message.ReplyToMessageID = update.Message.MessageID
 						bot.Send(message)
 						continue
 					}
 					startConfig, err := auction.ParseStartAuctionCommand(update.Message.Text)
 					if err != nil {
-						message := tgbotapi.NewMessage(chatID, err.Error())
+						message := tgbotapi.NewMessage(chatID, messages.INVALID_START_MESSAGE)
+						message.ReplyToMessageID = update.Message.MessageID
 						bot.Send(message)
 						continue
 					}
@@ -88,12 +93,14 @@ func main() {
 					if auction.GetActiveAuction() != nil {
 						auctionBids <- update
 					} else {
-						message := tgbotapi.NewMessage(chatID, "No active auction")
+						message := tgbotapi.NewMessage(chatID, messages.NO_ACTIVE_AUCTION_MESSAGE)
+						message.ReplyToMessageID = update.Message.MessageID
 						bot.Send(message)
 					}
 
 				case "help":
-					message := tgbotapi.NewMessage(chatID, "Available commands:\n/start <name> <start price> <min step>\n/bid <auction name> <amount>\n/help")
+					message := tgbotapi.NewMessage(chatID, messages.HELP_MESSAGE)
+					message.ReplyToMessageID = update.Message.MessageID
 					bot.Send(message)
 				}
 			}

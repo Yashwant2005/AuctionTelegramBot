@@ -1,6 +1,8 @@
 package auction
 
 import (
+	"AuctionBot/messages"
+	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -42,27 +44,29 @@ func (a *FirstPriceAuction) Name() string {
 	return a.name
 }
 
-func (a *FirstPriceAuction) Start() string {
-	a.status = "Started"
-	text := fmt.Sprintf("Auction %s has started. Starting price is %f and minimum step for new bid is %f. If you want to bid, you have to send a message with format \"/bid %s your_bid\".", a.Name(), a.startPrice, a.minStep, a.Name())
-	return text
+func (a *FirstPriceAuction) StartPrice() float64 {
+	return a.startPrice
 }
 
-func (a *FirstPriceAuction) End() string {
+func (a *FirstPriceAuction) CurrentPrice() float64 {
+	return a.currentPrice
+}
+
+func (a *FirstPriceAuction) MinStep() float64 {
+	return a.minStep
+}
+
+func (a *FirstPriceAuction) Start() {
+	a.status = "Started"
+}
+
+func (a *FirstPriceAuction) End() {
 	a.status = "Finished"
-	text := fmt.Sprintf("Auction %s has ended.", a.Name())
-	return text
 }
 
 func (a *FirstPriceAuction) Bid(bidder string, amount float64) (string, error) {
-	if a.status == "Created" {
-		return "", fmt.Errorf("auction %s is not started yet", a.Name())
-	}
-	if a.status == "Finished" {
-		return "", fmt.Errorf("auction %s is already finished", a.Name())
-	}
 	if amount > a.currentPrice-a.minStep {
-		return "", fmt.Errorf("bid amount should be less than or equal to %f", a.currentPrice-a.minStep)
+		return "", fmt.Errorf(messages.INVALID_BID_AMOUNT_MESSAGE, a.CurrentPrice(), a.CurrentPrice()-a.MinStep())
 	}
 	bid := Bid{
 		ID:     len(a.history) + 1,
@@ -74,12 +78,12 @@ func (a *FirstPriceAuction) Bid(bidder string, amount float64) (string, error) {
 	a.history[len(a.history)-1].Status = "Inactive"
 	a.history = append(a.history, bid)
 	a.currentPrice = amount
-	return fmt.Sprintf("bid %d from %s with amount %f has been accepted", bid.ID, bid.Bidder, bid.Amount), nil
+	return fmt.Sprintf(messages.ACCEPTED_BID_MESSAGE, bid.Bidder, bid.Amount), nil
 }
 
 func (a *FirstPriceAuction) Winner() (string, error) {
 	if a.status != "Finished" {
-		return "", fmt.Errorf("auction %s is not finished yet", a.Name())
+		return "", errors.New("auction is not finished yet")
 	}
 	winner := a.history[len(a.history)-1].Bidder
 	return winner, nil
@@ -87,7 +91,7 @@ func (a *FirstPriceAuction) Winner() (string, error) {
 
 func (a *FirstPriceAuction) WinnerPrice() (float64, error) {
 	if a.status != "Finished" {
-		return 0, fmt.Errorf("auction %s is not finished yet", a.Name())
+		return 0, errors.New("auction is not finished yet")
 	}
 	winnerPrice := a.history[len(a.history)-1].Amount
 	return winnerPrice, nil
@@ -118,7 +122,7 @@ func NewFirstPriceAuction(name string, startPrice float64, minStep float64) Auct
 	bid := Bid{
 		ID:     1,
 		Bidder: "System",
-		Amount: startPrice,
+		Amount: startPrice + minStep,
 		Status: "Active",
 	}
 	auction.history = append(auction.history, bid)

@@ -1,6 +1,7 @@
 package auction
 
 import (
+	"AuctionBot/messages"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"regexp"
@@ -33,51 +34,69 @@ func GetActiveAuction() Auction {
 	return activeAuction
 }
 
-func Auctioneer(auction Auction, chatID int64, send chan tgbotapi.MessageConfig, receive tgbotapi.UpdatesChannel) {
-	startingMessageText := auction.Start()
+func Auctioneer(auction Auction, chatID int64, send chan tgbotapi.Chattable, receive tgbotapi.UpdatesChannel) {
+	auction.Start()
 	activeAuction = auction
 
+	startingMessageText := fmt.Sprintf(messages.START_AUCTION_MESSAGE, auction.Name(), auction.StartPrice(), auction.MinStep())
 	startingMessage := tgbotapi.NewMessage(chatID, startingMessageText)
 	send <- startingMessage
 	duration := 40 * time.Second
 
-	notice := time.NewTimer(duration - 1*time.Second)
-	timer := time.NewTimer(duration)
+	countDown := time.NewTimer(duration)
+	counter := 3
 
 	for {
 		select {
-		case <-notice.C:
-			noticeMessageText := "Auction is going to end in 10 seconds. Bid sooner if you want to win!"
-			noticeMessage := tgbotapi.NewMessage(chatID, noticeMessageText)
-			send <- noticeMessage
+		case <-countDown.C:
+			if counter == 3 {
+				countDownMessage := tgbotapi.NewMessage(chatID, fmt.Sprintf(messages.COUNTDOWN_THREE_MESSAGE, auction.CurrentPrice()))
+				send <- countDownMessage
+				counter--
+				countDown.Reset(duration)
+				continue
+			} else if counter == 2 {
+				countDownMessage := tgbotapi.NewMessage(chatID, fmt.Sprintf(messages.COUNTDOWN_TWO_MESSAGE, auction.CurrentPrice()))
+				send <- countDownMessage
+				counter--
+				countDown.Reset(duration)
+				continue
+			} else if counter == 1 {
+				countDownMessage := tgbotapi.NewMessage(chatID, fmt.Sprintf(messages.COUNTDOWN_ONE_MESSAGE, auction.CurrentPrice()))
+				send <- countDownMessage
+				counter--
+				countDown.Reset(duration)
+				continue
+			} else {
+				activeAuction = nil
+				auction.End()
 
-		case <-timer.C:
-			endingMessageText := auction.End()
-			activeAuction = nil
+				winner, _ := auction.Winner()
+				winnerPrice, _ := auction.WinnerPrice()
 
-			endingMessage := tgbotapi.NewMessage(chatID, endingMessageText)
-			send <- endingMessage
+				messageText := fmt.Sprintf(messages.END_AUCTION_MESSAGE, auction.Name(), winner, winnerPrice)
+				message := tgbotapi.NewMessage(chatID, messageText)
+				send <- message
 
-			winner, _ := auction.Winner()
-			winnerPrice, _ := auction.WinnerPrice()
-			messageText := fmt.Sprintf("Winner of the auction is %s with price %f", winner, winnerPrice)
-			message := tgbotapi.NewMessage(chatID, messageText)
-			send <- message
+				file := tgbotapi.FilePath("./media/leonardo-dicaprio-sold-gif.mp4")
+				gif := tgbotapi.NewAnimation(chatID, file)
+				send <- gif
 
-			auction.WriteLog()
-			return
+				auction.WriteLog()
+				return
+			}
 
 		case update := <-receive:
 			if update.Message != nil {
 				bid, err := parseBidMessage(update)
 				if err != nil {
-					message := tgbotapi.NewMessage(chatID, err.Error())
+					message := tgbotapi.NewMessage(chatID, messages.INVALID_BID_MESSAGE)
 					message.ReplyToMessageID = update.Message.MessageID
 					send <- message
 					continue
 				}
 				if bid.AuctionName != auction.Name() {
-					message := tgbotapi.NewMessage(chatID, "This bid is for another auction")
+					message := tgbotapi.NewMessage(chatID, messages.NO_AUCTION_MESSAGE)
 					message.ReplyToMessageID = update.Message.MessageID
 					send <- message
 					continue
@@ -88,8 +107,8 @@ func Auctioneer(auction Auction, chatID int64, send chan tgbotapi.MessageConfig,
 					messageText = err.Error()
 				} else {
 					messageText = result
-					notice.Reset(duration - 5*time.Second)
-					timer.Reset(duration)
+					countDown.Reset(duration)
+					counter = 3
 				}
 				message := tgbotapi.NewMessage(chatID, messageText)
 				message.ReplyToMessageID = update.Message.MessageID
