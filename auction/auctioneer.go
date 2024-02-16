@@ -71,8 +71,8 @@ func Auctioneer(auction Auction, chatID int64, send chan tgbotapi.Chattable, rec
 				activeAuction = nil
 				auction.End()
 
-				winner, _ := auction.Winner()
-				winnerPrice, _ := auction.WinnerPrice()
+				winner := auction.Winner()
+				winnerPrice := auction.WinnerPrice()
 
 				messageText := fmt.Sprintf(messages.END_AUCTION_MESSAGE, auction.Name(), winner, winnerPrice)
 				message := tgbotapi.NewMessage(chatID, messageText)

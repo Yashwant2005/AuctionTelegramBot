@@ -16,9 +16,9 @@ type Auction interface {
 	// Bid in auction
 	Bid(bidder string, amount float64) (string, error)
 	// Winner of auction
-	Winner() (string, error)
+	Winner() string
 	// WinnerPrice Winner price
-	WinnerPrice() (float64, error)
+	WinnerPrice() float64
 	// WriteLog Write log
 	WriteLog()
 }

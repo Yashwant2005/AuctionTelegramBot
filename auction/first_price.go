@@ -2,7 +2,6 @@ package auction
 
 import (
 	"AuctionBot/messages"
-	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -81,20 +80,14 @@ func (a *FirstPriceAuction) Bid(bidder string, amount float64) (string, error) {
 	return fmt.Sprintf(messages.ACCEPTED_BID_MESSAGE, bid.Bidder, bid.Amount), nil
 }
 
-func (a *FirstPriceAuction) Winner() (string, error) {
-	if a.status != "Finished" {
-		return "", errors.New("auction is not finished yet")
-	}
+func (a *FirstPriceAuction) Winner() string {
 	winner := a.history[len(a.history)-1].Bidder
-	return winner, nil
+	return winner
 }
 
-func (a *FirstPriceAuction) WinnerPrice() (float64, error) {
-	if a.status != "Finished" {
-		return 0, errors.New("auction is not finished yet")
-	}
+func (a *FirstPriceAuction) WinnerPrice() float64 {
 	winnerPrice := a.history[len(a.history)-1].Amount
-	return winnerPrice, nil
+	return winnerPrice
 }
 
 func (a *FirstPriceAuction) WriteLog() {
