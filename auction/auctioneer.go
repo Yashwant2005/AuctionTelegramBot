@@ -41,7 +41,7 @@ func Auctioneer(auction Auction, chatID int64, send chan tgbotapi.Chattable, rec
 	startingMessageText := fmt.Sprintf(messages.START_AUCTION_MESSAGE, auction.Name(), auction.StartPrice(), auction.MinStep())
 	startingMessage := tgbotapi.NewMessage(chatID, startingMessageText)
 	send <- startingMessage
-	duration := 40 * time.Second
+	duration := 5 * time.Second
 
 	countDown := time.NewTimer(duration)
 	counter := 3
@@ -90,13 +90,19 @@ func Auctioneer(auction Auction, chatID int64, send chan tgbotapi.Chattable, rec
 			if update.Message != nil {
 				bid, err := parseBidMessage(update)
 				if err != nil {
-					message := tgbotapi.NewMessage(chatID, messages.INVALID_BID_MESSAGE)
+					message := tgbotapi.NewMessage(update.Message.Chat.ID, messages.INVALID_BID_MESSAGE)
 					message.ReplyToMessageID = update.Message.MessageID
 					send <- message
 					continue
 				}
 				if bid.AuctionName != auction.Name() {
-					message := tgbotapi.NewMessage(chatID, messages.NO_AUCTION_MESSAGE)
+					message := tgbotapi.NewMessage(update.Message.Chat.ID, messages.NO_AUCTION_MESSAGE)
+					message.ReplyToMessageID = update.Message.MessageID
+					send <- message
+					continue
+				}
+				if update.Message.Chat.ID != chatID {
+					message := tgbotapi.NewMessage(update.Message.Chat.ID, messages.INVALID_CHAT_ID_MESSAGE)
 					message.ReplyToMessageID = update.Message.MessageID
 					send <- message
 					continue
