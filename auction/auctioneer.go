@@ -20,7 +20,7 @@ func parseBidMessage(update tgbotapi.Update) (Bid, error) {
 
 	matches := bidPattern.FindStringSubmatch(text)
 	auctionName := matches[1]
-	amount, _ := strconv.ParseFloat(matches[2], 32)
+	amount, _ := strconv.ParseFloat(matches[2], 64)
 	return Bid{
 		AuctionName: auctionName,
 		Bidder:      update.Message.From.UserName,
@@ -41,7 +41,7 @@ func Auctioneer(auction Auction, chatID int64, send chan tgbotapi.Chattable, rec
 	startingMessageText := fmt.Sprintf(messages.START_AUCTION_MESSAGE, auction.Name(), auction.StartPrice(), auction.MinStep())
 	startingMessage := tgbotapi.NewMessage(chatID, startingMessageText)
 	send <- startingMessage
-	duration := 5 * time.Second
+	duration := 15 * time.Second
 
 	countDown := time.NewTimer(duration)
 	counter := 3
