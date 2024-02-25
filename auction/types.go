@@ -20,11 +20,11 @@ func ParseStartAuctionCommand(text string) (StartAuctionConfig, error) {
 		return StartAuctionConfig{}, errors.New(fmt.Sprintf("Start command should be in format %s", StartPattern.String()))
 	}
 	matches := StartPattern.FindStringSubmatch(text)
-	startPrice, err := strconv.ParseFloat(matches[2], 32)
+	startPrice, err := strconv.ParseFloat(matches[2], 64)
 	if err != nil {
 		return StartAuctionConfig{}, err
 	}
-	minStep, err := strconv.ParseFloat(matches[4], 32)
+	minStep, err := strconv.ParseFloat(matches[4], 64)
 	if err != nil {
 		return StartAuctionConfig{}, err
 	}

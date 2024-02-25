@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  auction:
+    container_name: "auction"
+    image: auctionbot:0.0.4
+
+    volumes:
+      - ./log:/app/log
+      - ./config:/app/config

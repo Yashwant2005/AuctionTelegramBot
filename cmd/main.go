@@ -34,21 +34,28 @@ func main() {
 		log.Panic(err)
 	}
 
+	bot.Debug = true
+
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	updates := bot.GetUpdatesChan(tgbotapi.UpdateConfig{Timeout: 60})
 
 	auctionBids := make(chan tgbotapi.Update)
-	auctioneerMessages := make(chan tgbotapi.Chattable)
 
-	go func(messages chan tgbotapi.Chattable) {
-		for {
-			select {
-			case message := <-messages:
-				bot.Send(message)
+	var numThreads = 10
+
+	auctioneerMessages := make(chan tgbotapi.Chattable, numThreads)
+
+	for i := 0; i < numThreads; i++ {
+		go func(messages chan tgbotapi.Chattable) {
+			for {
+				select {
+				case message := <-messages:
+					bot.Send(message)
+				}
 			}
-		}
-	}(auctioneerMessages)
+		}(auctioneerMessages)
+	}
 
 	var adminUserLists = viper.GetStringSlice("admin_usernames")
 
