@@ -74,13 +74,17 @@ func (a *ReverseAuction) End() {
 }
 
 func (a *ReverseAuction) Bid(bidder string, amount float64) (string, error) {
+	if amount > a.currentPrice-a.minStep {
+		return "", fmt.Errorf(messages.INVALID_BID_AMOUNT_MESSAGE, a.CurrentPrice(), a.CurrentPrice()-a.MinStep())
+	}
 	bid := Bid{
 		ID:     len(a.history) + 1,
 		Bidder: bidder,
 		Amount: amount,
+		Status: "Active",
 		Time:   time.Now(),
 	}
-
+  
 	if amount > a.currentPrice-a.minStep {
 		bid.Status = "Not accepted"
 		a.history = append(a.history, bid)
@@ -104,7 +108,8 @@ func (a *ReverseAuction) WinnerPrice() float64 {
 	return winnerPrice
 }
 
-func (a *ReverseAuction) WriteLog(name string) {
+func (a *ReverseAuction) WriteLog() {
+	name := fmt.Sprintf("./log/%s-%s.log", time.Now().Format("2006-01-02-15-04-05"), a.Name())
 	file, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		logrus.Warn("could not open log file")

@@ -94,7 +94,8 @@ func (a *SpecialAuction) WinnerPrice() float64 {
 	return winnerPrice
 }
 
-func (a *SpecialAuction) WriteLog(name string) {
+func (a *SpecialAuction) WriteLog() {
+	name := fmt.Sprintf("./log/%s-%s.log", time.Now().Format("2006-01-02-15-04-05"), a.Name())
 	file, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		logrus.Warn("could not open log file")
