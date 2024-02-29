@@ -50,14 +50,7 @@ func (a *Auctioneer) Run(receive tgbotapi.UpdatesChannel) {
 	activeAuction = a.auction
 	a.auction.Start()
 
-	var startingMessage tgbotapi.Chattable
-	switch a.auction.(type) {
-	case *ReverseAuction:
-		startingMessage = tgbotapi.NewMessage(a.chatID, fmt.Sprintf(messages.START_REVERSE_AUCTION_MESSAGE, a.auction.Name(), a.auction.StartPrice(), a.auction.MinStep(), a.auction.Name()))
-	case *SpecialAuction:
-		startingMessage = tgbotapi.NewMessage(a.chatID, fmt.Sprintf(messages.START_SPECIAL_AUCTION_MESSAGE, a.auction.Name(), a.auction.StartPrice(), a.auction.MinStep(), a.auction.Name()))
-	}
-	a.send <- startingMessage
+	a.send <- tgbotapi.NewMessage(a.chatID, a.auction.StartingMessage())
 
 	go a.auction.Auctioneer()(a)
 

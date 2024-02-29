@@ -45,6 +45,10 @@ func (a *SpecialAuction) StartPrice() float64 {
 	return a.startPrice
 }
 
+func (a *SpecialAuction) StartingMessage() string {
+	return fmt.Sprintf(messages.START_SPECIAL_AUCTION_MESSAGE, a.Name(), a.StartPrice(), a.MinStep(), a.Name())
+}
+
 func (a *SpecialAuction) CurrentPrice() float64 {
 	return a.currentPrice
 }

@@ -51,6 +51,6 @@ func TestReverseAuction(t *testing.T) {
 		}
 	}
 
-	require.Equal(t, 10.0, auction.CurrentPrice())
+	require.Equal(t, 10.0, auction.WinnerPrice())
 	require.Equal(t, "bidder1", auction.Winner())
 }

@@ -53,6 +53,10 @@ func (a *ReverseAuction) StartPrice() float64 {
 	return a.startPrice
 }
 
+func (a *ReverseAuction) StartingMessage() string {
+	return fmt.Sprintf(messages.START_REVERSE_AUCTION_MESSAGE, a.Name(), a.StartPrice(), a.MinStep(), a.Name())
+}
+
 func (a *ReverseAuction) CurrentPrice() float64 {
 	return a.currentPrice
 }
@@ -157,11 +161,11 @@ func (a *ReverseAuction) Auctioneer() func(auctioneer *Auctioneer) {
 			case <-countDown.C:
 				switch counter {
 				case 3:
-					auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.COUNTDOWN_THREE_MESSAGE, auctioneer.auction.CurrentPrice()))
+					auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.COUNTDOWN_THREE_MESSAGE, a.CurrentPrice()))
 				case 2:
-					auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.COUNTDOWN_TWO_MESSAGE, auctioneer.auction.CurrentPrice()))
+					auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.COUNTDOWN_TWO_MESSAGE, a.CurrentPrice()))
 				case 1:
-					auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.COUNTDOWN_ONE_MESSAGE, auctioneer.auction.CurrentPrice()))
+					auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.COUNTDOWN_ONE_MESSAGE, a.CurrentPrice()))
 				case 0:
 					auctioneer.stopChannel <- "Auction finished"
 					return

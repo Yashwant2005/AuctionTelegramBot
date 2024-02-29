@@ -9,12 +9,8 @@ type Auction interface {
 	Start()
 	// End auction
 	End()
-	// StartPrice of auction
-	StartPrice() float64
-	// CurrentPrice of auction
-	CurrentPrice() float64
-	// MinStep of auction
-	MinStep() float64
+	// StartingMessage Starting message
+	StartingMessage() string
 	// Bid in auction
 	Bid(bidder string, amount float64) (string, error)
 	// Winner of auction
