@@ -18,7 +18,7 @@ type Auction interface {
 	// WinnerPrice Winner price
 	WinnerPrice() float64
 	// WriteLog Write log
-	WriteLog()
+	WriteLog(name string)
 	// Auctioneer that will be used to notify about auction events
 	Auctioneer() func(auctioneer *Auctioneer)
 	// ParseBid Parse Bid from string
