@@ -6,6 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -16,31 +17,46 @@ type StartAuctionConfig struct {
 	MinStep    float64
 }
 
-var StartPattern = regexp.MustCompile(`^/start (\w+) (\w+) (\d+(\.\d+)?) (\d+(\.\d+)?)$`)
+var startReversePattern = regexp.MustCompile(`^/start (\w+) (\w+) (\d+(\.\d+)?) (\d+(\.\d+)?)$`)
+var startSpecialPattern = regexp.MustCompile(`^/start (\w+) (\w+) (\d+(\.\d+)?) (\d+(\.\d+)?)$`)
+var startSealedBidPattern = regexp.MustCompile(`^/start (\w+) (\w+)$`)
 
 func ParseStartAuctionCommand(text string) (StartAuctionConfig, error) {
-	if !StartPattern.MatchString(text) {
-		return StartAuctionConfig{}, errors.New(fmt.Sprintf("Start command should be in format %s", StartPattern.String()))
+	var startPattern *regexp.Regexp
+	auctionType := strings.Split(text, " ")[1]
+	switch auctionType {
+	case "reverse_auction":
+		startPattern = startReversePattern
+	case "special_auction":
+		startPattern = startSpecialPattern
+	case "sealed_bid_auction":
+		startPattern = startSealedBidPattern
+	default:
+		return StartAuctionConfig{}, errors.New("auction type should be reverse_auction or special_auction or sealed_bid_auction")
 	}
-	matches := StartPattern.FindStringSubmatch(text)
-	if matches[1] != "reverse_auction" && matches[1] != "special_auction" {
-		return StartAuctionConfig{}, errors.New("Auction type should be reverse_auction or special_auction")
+	if !startPattern.MatchString(text) {
+		return StartAuctionConfig{}, errors.New(fmt.Sprintf("Start command should be in format %s", startPattern.String()))
+	}
+	matches := startPattern.FindStringSubmatch(text)
+	switch auctionType {
+	case "reverse_auction", "special_auction":
+		startPrice, _ := strconv.ParseFloat(matches[3], 64)
+		minStep, _ := strconv.ParseFloat(matches[5], 64)
 
+		return StartAuctionConfig{
+			Type:       matches[1],
+			Name:       matches[2],
+			StartPrice: startPrice,
+			MinStep:    minStep,
+		}, nil
+	case "sealed_bid_auction":
+		return StartAuctionConfig{
+			Type: matches[1],
+			Name: matches[2],
+		}, nil
+	default:
+		return StartAuctionConfig{}, errors.New("auction type should be reverse_auction or special_auction or sealed_bid_auction")
 	}
-	startPrice, err := strconv.ParseFloat(matches[3], 64)
-	if err != nil {
-		return StartAuctionConfig{}, err
-	}
-	minStep, err := strconv.ParseFloat(matches[5], 64)
-	if err != nil {
-		return StartAuctionConfig{}, err
-	}
-	return StartAuctionConfig{
-		Type:       matches[1],
-		Name:       matches[2],
-		StartPrice: startPrice,
-		MinStep:    minStep,
-	}, nil
 }
 
 type Bid struct {

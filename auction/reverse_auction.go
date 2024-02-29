@@ -24,7 +24,6 @@ type ReverseAuction struct {
 	status string
 	// Auction history
 	history []Bid
-	// Telegram Bot
 }
 
 func NewReverseAuction(name string, startPrice float64, minStep float64) Auction {
@@ -73,28 +72,22 @@ func (a *ReverseAuction) End() {
 	a.status = "Finished"
 }
 
-func (a *ReverseAuction) Bid(bidder string, amount float64) (string, error) {
-	if amount > a.currentPrice-a.minStep {
-		return "", fmt.Errorf(messages.INVALID_BID_AMOUNT_MESSAGE, a.CurrentPrice(), a.CurrentPrice()-a.MinStep())
-	}
-	bid := Bid{
-		ID:     len(a.history) + 1,
-		Bidder: bidder,
-		Amount: amount,
-		Status: "Active",
-		Time:   time.Now(),
-	}
-  
-	if amount > a.currentPrice-a.minStep {
+func (a *ReverseAuction) Bid(bid Bid) (string, error) {
+	if bid.Amount > a.currentPrice-a.minStep {
 		bid.Status = "Not accepted"
 		a.history = append(a.history, bid)
 		return "", fmt.Errorf(messages.INVALID_BID_AMOUNT_MESSAGE, a.CurrentPrice(), a.CurrentPrice()-a.MinStep())
 	}
 
-	a.history[len(a.history)-1].Status = "Inactive"
-	bid.Status = "Active"
+	for i, b := range a.history {
+		if b.Status == "Winner" {
+			a.history[i].Status = "Not winner"
+		}
+	}
+
+	bid.Status = "Winner"
 	a.history = append(a.history, bid)
-	a.currentPrice = amount
+	a.currentPrice = bid.Amount
 	return fmt.Sprintf(messages.ACCEPTED_BID_MESSAGE, bid.Bidder, bid.Amount), nil
 }
 
@@ -108,8 +101,7 @@ func (a *ReverseAuction) WinnerPrice() float64 {
 	return winnerPrice
 }
 
-func (a *ReverseAuction) WriteLog() {
-	name := fmt.Sprintf("./log/%s-%s.log", time.Now().Format("2006-01-02-15-04-05"), a.Name())
+func (a *ReverseAuction) WriteLog(name string) {
 	file, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		logrus.Warn("could not open log file")
@@ -138,6 +130,7 @@ func (a *ReverseAuction) ParseBid(update tgbotapi.Update) (Bid, error) {
 		AuctionName: auctionName,
 		Bidder:      update.Message.From.UserName,
 		Amount:      amount,
+		Time:        time.Now(),
 	}, nil
 }
 
@@ -152,7 +145,7 @@ func (a *ReverseAuction) Auctioneer() func(auctioneer *Auctioneer) {
 		for {
 			select {
 			case bid := <-auctioneer.bidsChannel:
-				result, err := auctioneer.auction.Bid(bid.Bidder, bid.Amount)
+				result, err := auctioneer.auction.Bid(bid)
 				if err != nil {
 					message := tgbotapi.NewMessage(auctioneer.chatID, err.Error())
 					message.ReplyToMessageID = bid.Update.Message.MessageID

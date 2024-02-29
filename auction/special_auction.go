@@ -24,7 +24,6 @@ func NewSpecialAuction(name string, startPrice float64, minStep float64) Auction
 		ID:     1,
 		Bidder: "System",
 		Amount: startPrice,
-		Status: "Active",
 		Time:   time.Now(),
 	}
 	return &SpecialAuction{
@@ -65,21 +64,9 @@ func (a *SpecialAuction) End() {
 	a.status = "Finished"
 }
 
-func (a *SpecialAuction) Bid(bidder string, amount float64) (string, error) {
-	if a.status != "Started" {
-		return "", fmt.Errorf("auction is not started")
-	}
-
-	bid := Bid{
-		Bidder: bidder,
-		Amount: amount,
-		Status: "Active",
-		Time:   time.Now(),
-	}
-
-	a.history[len(a.history)-1].Status = "Inactive"
+func (a *SpecialAuction) Bid(bid Bid) (string, error) {
 	a.history = append(a.history, bid)
-	a.currentPrice = amount
+	a.currentPrice = bid.Amount
 
 	return fmt.Sprintf(messages.ACCEPTED_BID_MESSAGE, bid.Bidder, bid.Amount), nil
 }
@@ -94,8 +81,7 @@ func (a *SpecialAuction) WinnerPrice() float64 {
 	return winnerPrice
 }
 
-func (a *SpecialAuction) WriteLog() {
-	name := fmt.Sprintf("./log/%s-%s.log", time.Now().Format("2006-01-02-15-04-05"), a.Name())
+func (a *SpecialAuction) WriteLog(name string) {
 	file, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		logrus.Warn("could not open log file")
@@ -122,6 +108,8 @@ func (a *SpecialAuction) ParseBid(update tgbotapi.Update) (Bid, error) {
 	return Bid{
 		AuctionName: auctionName,
 		Bidder:      update.Message.From.UserName,
+		Amount:      a.CurrentPrice(),
+		Time:        time.Now(),
 	}, nil
 }
 
@@ -135,10 +123,15 @@ func (a *SpecialAuction) Auctioneer() func(auctioneer *Auctioneer) {
 		for {
 			select {
 			case <-ticker.C:
-				a.Bid("System", a.CurrentPrice()+a.MinStep())
+				bid := Bid{
+					Bidder: "System",
+					Amount: a.CurrentPrice() + a.MinStep(),
+					Time:   time.Now(),
+				}
+				a.Bid(bid)
 				auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.SPECIAL_AUCTION_PRICE_RAISED_MESSAGE, a.CurrentPrice()))
 			case bid := <-auctioneer.bidsChannel:
-				a.Bid(bid.Bidder, a.CurrentPrice())
+				a.Bid(bid)
 				message := tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.SPECIAL_AUCTION_BID_ACCEPTED_MESSAGE, bid.Bidder))
 				message.ReplyToMessageID = bid.Update.Message.MessageID
 				auctioneer.send <- message
