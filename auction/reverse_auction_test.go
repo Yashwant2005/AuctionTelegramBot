@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-func TestFirstPrice(t *testing.T) {
-	auction := NewFirstPriceAuction("test", 100, 10).(Auction)
+func TestReverseAuction(t *testing.T) {
+	auction := NewReverseAuction("test", 100, 10).(Auction)
 
 	type BidTest struct {
 		bidder        string
@@ -51,6 +51,6 @@ func TestFirstPrice(t *testing.T) {
 		}
 	}
 
-	require.Equal(t, 10.0, auction.CurrentPrice())
+	require.Equal(t, 10.0, auction.WinnerPrice())
 	require.Equal(t, "bidder1", auction.Winner())
 }
