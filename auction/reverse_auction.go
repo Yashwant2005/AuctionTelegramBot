@@ -3,6 +3,7 @@ package auction
 import (
 	"AuctionBot/messages"
 	"fmt"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sirupsen/logrus"
 	"os"
 	"time"
@@ -21,9 +22,11 @@ type Bid struct {
 	Status string
 	// Bid time
 	Time time.Time
+	// Bid telegram message
+	Update tgbotapi.Update
 }
 
-type FirstPriceAuction struct {
+type ReverseAuction struct {
 	// Auction name
 	name string
 	// Auction start price
@@ -39,31 +42,31 @@ type FirstPriceAuction struct {
 	// Telegram Bot
 }
 
-func (a *FirstPriceAuction) Name() string {
+func (a *ReverseAuction) Name() string {
 	return a.name
 }
 
-func (a *FirstPriceAuction) StartPrice() float64 {
+func (a *ReverseAuction) StartPrice() float64 {
 	return a.startPrice
 }
 
-func (a *FirstPriceAuction) CurrentPrice() float64 {
+func (a *ReverseAuction) CurrentPrice() float64 {
 	return a.currentPrice
 }
 
-func (a *FirstPriceAuction) MinStep() float64 {
+func (a *ReverseAuction) MinStep() float64 {
 	return a.minStep
 }
 
-func (a *FirstPriceAuction) Start() {
+func (a *ReverseAuction) Start() {
 	a.status = "Started"
 }
 
-func (a *FirstPriceAuction) End() {
+func (a *ReverseAuction) End() {
 	a.status = "Finished"
 }
 
-func (a *FirstPriceAuction) Bid(bidder string, amount float64) (string, error) {
+func (a *ReverseAuction) Bid(bidder string, amount float64) (string, error) {
 	if amount > a.currentPrice-a.minStep {
 		return "", fmt.Errorf(messages.INVALID_BID_AMOUNT_MESSAGE, a.CurrentPrice(), a.CurrentPrice()-a.MinStep())
 	}
@@ -80,17 +83,17 @@ func (a *FirstPriceAuction) Bid(bidder string, amount float64) (string, error) {
 	return fmt.Sprintf(messages.ACCEPTED_BID_MESSAGE, bid.Bidder, bid.Amount), nil
 }
 
-func (a *FirstPriceAuction) Winner() string {
+func (a *ReverseAuction) Winner() string {
 	winner := a.history[len(a.history)-1].Bidder
 	return winner
 }
 
-func (a *FirstPriceAuction) WinnerPrice() float64 {
+func (a *ReverseAuction) WinnerPrice() float64 {
 	winnerPrice := a.history[len(a.history)-1].Amount
 	return winnerPrice
 }
 
-func (a *FirstPriceAuction) WriteLog() {
+func (a *ReverseAuction) WriteLog() {
 	name := fmt.Sprintf("./log/%s-%s.log", time.Now().Format("2006-01-02-15-04-05"), a.Name())
 	file, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
@@ -104,8 +107,8 @@ func (a *FirstPriceAuction) WriteLog() {
 	file.WriteString(fmt.Sprintf("Winner price: %f\n", a.history[len(a.history)-1].Amount))
 }
 
-func NewFirstPriceAuction(name string, startPrice float64, minStep float64) Auction {
-	auction := &FirstPriceAuction{
+func NewReverseAuction(name string, startPrice float64, minStep float64) Auction {
+	auction := &ReverseAuction{
 		name:         name,
 		startPrice:   startPrice,
 		currentPrice: startPrice,

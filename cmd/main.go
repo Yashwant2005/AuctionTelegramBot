@@ -94,8 +94,8 @@ func main() {
 						continue
 					}
 
-					a := auction.NewFirstPriceAuction(startConfig.Name, startConfig.StartPrice, startConfig.MinStep)
-					go auction.Auctioneer(a, chatID, auctioneerMessages, auctionBids)
+					auctioneer := auction.NewAuctioneer(startConfig, chatID, auctioneerMessages)
+					go auctioneer.Run(auctionBids)
 
 				case "bid":
 					if auction.GetActiveAuction() != nil {
