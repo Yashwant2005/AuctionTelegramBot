@@ -4,7 +4,6 @@ import (
 	"AuctionBot/messages"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"time"
 )
 
 type Auctioneer struct {
@@ -72,10 +71,7 @@ func (a *Auctioneer) Run(receive tgbotapi.UpdatesChannel) {
 			gif := tgbotapi.NewAnimation(a.chatID, file)
 			a.send <- gif
 
-			logName := fmt.Sprintf("./log/%s-%s.log", time.Now().Format("2006-01-02-15-04-05"), a.auction.Name())
-			a.auction.WriteLog(logName)
-			file = tgbotapi.FilePath(logName)
-			a.send <- tgbotapi.NewDocument(a.chatID, file)
+			a.auction.WriteLog()
 			return
 
 		case update := <-receive:
