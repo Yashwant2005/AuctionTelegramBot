@@ -84,7 +84,15 @@ func (a *ReverseAuction) Bid(bidder string, amount float64) (string, error) {
 		Status: "Active",
 		Time:   time.Now(),
 	}
+  
+	if amount > a.currentPrice-a.minStep {
+		bid.Status = "Not accepted"
+		a.history = append(a.history, bid)
+		return "", fmt.Errorf(messages.INVALID_BID_AMOUNT_MESSAGE, a.CurrentPrice(), a.CurrentPrice()-a.MinStep())
+	}
+
 	a.history[len(a.history)-1].Status = "Inactive"
+	bid.Status = "Active"
 	a.history = append(a.history, bid)
 	a.currentPrice = amount
 	return fmt.Sprintf(messages.ACCEPTED_BID_MESSAGE, bid.Bidder, bid.Amount), nil
