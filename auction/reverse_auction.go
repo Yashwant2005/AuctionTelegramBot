@@ -87,7 +87,7 @@ func (a *ReverseAuction) Bid(bidder string, amount float64) (string, error) {
 		return "", fmt.Errorf(messages.INVALID_BID_AMOUNT_MESSAGE, a.CurrentPrice(), a.CurrentPrice()-a.MinStep())
 	}
 
-	a.history[len(a.history)-2].Status = "Inactive"
+	a.history[len(a.history)-1].Status = "Inactive"
 	bid.Status = "Active"
 	a.history = append(a.history, bid)
 	a.currentPrice = amount
