@@ -45,4 +45,6 @@ const (
 	ACTIVE_AUCTION_EXISTS_MESSAGE = "‼️ اول اجازه بده مناقصه قبلی به پایان برسه!"
 
 	INVALID_START_MESSAGE = "❗️ فرمت شروع یک مناقصه را درست وارد کنید. با استفاده از /help می‌توانید فرمت صحیح را پیدا کنید."
+
+	SPECIAL_AUCTION_PRICE_RAISED_MESSAGE = "نمره باری دیگر افزایش یافت و ارزش فعلی آن %f است.\n"
 )

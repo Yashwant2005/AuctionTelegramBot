@@ -6,25 +6,10 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sirupsen/logrus"
 	"os"
+	"regexp"
+	"strconv"
 	"time"
 )
-
-type Bid struct {
-	// Bid ID
-	ID int
-	// AuctionName bidder
-	AuctionName string
-	// Bidder
-	Bidder string
-	// Bid amount
-	Amount float64
-	// Bid status
-	Status string
-	// Bid time
-	Time time.Time
-	// Bid telegram message
-	Update tgbotapi.Update
-}
 
 type ReverseAuction struct {
 	// Auction name
@@ -40,6 +25,23 @@ type ReverseAuction struct {
 	// Auction history
 	history []Bid
 	// Telegram Bot
+}
+
+func NewReverseAuction(name string, startPrice float64, minStep float64) Auction {
+	bid := Bid{
+		ID:     1,
+		Bidder: "System",
+		Amount: startPrice + minStep,
+		Status: "Active",
+	}
+	return &ReverseAuction{
+		name:         name,
+		startPrice:   startPrice,
+		currentPrice: startPrice,
+		minStep:      minStep,
+		status:       "Created",
+		history:      []Bid{bid},
+	}
 }
 
 func (a *ReverseAuction) Name() string {
@@ -107,20 +109,63 @@ func (a *ReverseAuction) WriteLog() {
 	file.WriteString(fmt.Sprintf("Winner price: %f\n", a.history[len(a.history)-1].Amount))
 }
 
-func NewReverseAuction(name string, startPrice float64, minStep float64) Auction {
-	auction := &ReverseAuction{
-		name:         name,
-		startPrice:   startPrice,
-		currentPrice: startPrice,
-		minStep:      minStep,
-		status:       "Created",
+var reverseAuctionBidPattern = regexp.MustCompile(`^/bid (\w+) (\d+(\.\d+)?)$`)
+
+func (a *ReverseAuction) ParseBid(update tgbotapi.Update) (Bid, error) {
+	text := update.Message.Text
+
+	if !reverseAuctionBidPattern.MatchString(text) {
+		return Bid{}, fmt.Errorf("bid command should be in format %s", reverseAuctionBidPattern.String())
 	}
-	bid := Bid{
-		ID:     1,
-		Bidder: "System",
-		Amount: startPrice + minStep,
-		Status: "Active",
+
+	matches := reverseAuctionBidPattern.FindStringSubmatch(text)
+	auctionName := matches[1]
+	amount, _ := strconv.ParseFloat(matches[2], 64)
+	return Bid{
+		AuctionName: auctionName,
+		Bidder:      update.Message.From.UserName,
+		Amount:      amount,
+	}, nil
+}
+
+func (a *ReverseAuction) Auctioneer() func(auctioneer *Auctioneer) {
+	return func(auctioneer *Auctioneer) {
+		duration := 5 * time.Second
+
+		countDown := time.NewTimer(duration)
+		defer countDown.Stop()
+
+		counter := 3
+		for {
+			select {
+			case bid := <-auctioneer.bidsChannel:
+				result, err := auctioneer.auction.Bid(bid.Bidder, bid.Amount)
+				if err != nil {
+					message := tgbotapi.NewMessage(auctioneer.chatID, err.Error())
+					auctioneer.send <- message
+					continue
+				}
+				message := tgbotapi.NewMessage(auctioneer.chatID, result)
+				auctioneer.send <- message
+
+				countDown.Reset(duration)
+				counter = 3
+
+			case <-countDown.C:
+				switch counter {
+				case 3:
+					auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.COUNTDOWN_THREE_MESSAGE, auctioneer.auction.CurrentPrice()))
+				case 2:
+					auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.COUNTDOWN_TWO_MESSAGE, auctioneer.auction.CurrentPrice()))
+				case 1:
+					auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.COUNTDOWN_ONE_MESSAGE, auctioneer.auction.CurrentPrice()))
+				case 0:
+					auctioneer.stopChannel <- "Auction finished"
+					return
+				}
+				counter--
+				countDown.Reset(duration)
+			}
+		}
 	}
-	auction.history = append(auction.history, bid)
-	return auction
 }

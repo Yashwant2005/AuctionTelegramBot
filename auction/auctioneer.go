@@ -4,9 +4,6 @@ import (
 	"AuctionBot/messages"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"regexp"
-	"strconv"
-	"time"
 )
 
 type Auctioneer struct {
@@ -18,17 +15,19 @@ type Auctioneer struct {
 	send chan tgbotapi.Chattable
 	// Receive channel
 	bidsChannel chan Bid
+	// Stop channel
+	stopChannel chan string
 }
 
 func NewAuctioneer(config StartAuctionConfig, chatID int64, send chan tgbotapi.Chattable) Auctioneer {
 	var auction Auction
-	if config.Type == "reverse_auction" {
+	switch config.Type {
+	case "reverse_auction":
 		auction = NewReverseAuction(config.Name, config.StartPrice, config.MinStep)
-	} else {
-		return Auctioneer{}
+	case "special_auction":
+		auction = NewSpecialAuction(config.Name, config.StartPrice, config.MinStep)
 	}
-	activeAuction = auction
-	auction.Start()
+	stopChannel := make(chan string)
 	bids := make(chan Bid)
 
 	return Auctioneer{
@@ -36,70 +35,14 @@ func NewAuctioneer(config StartAuctionConfig, chatID int64, send chan tgbotapi.C
 		chatID:      chatID,
 		send:        send,
 		bidsChannel: bids,
+		stopChannel: stopChannel,
 	}
-}
-
-var bidPattern = regexp.MustCompile(`^/bid (\w+) (\d+(\.\d+)?)$`)
-
-func parseBidMessage(update tgbotapi.Update) (Bid, error) {
-	text := update.Message.Text
-
-	if !bidPattern.MatchString(text) {
-		return Bid{}, fmt.Errorf("bid command should be in format %s", bidPattern.String())
-	}
-
-	matches := bidPattern.FindStringSubmatch(text)
-	auctionName := matches[1]
-	amount, _ := strconv.ParseFloat(matches[2], 64)
-	return Bid{
-		AuctionName: auctionName,
-		Bidder:      update.Message.From.UserName,
-		Amount:      amount,
-	}, nil
 }
 
 var activeAuction Auction
 
 func GetActiveAuction() Auction {
 	return activeAuction
-}
-
-func (a *Auctioneer) ReverseAuctionStoppingRule(stopChannel chan string) {
-	duration := 15 * time.Second
-
-	countDown := time.NewTimer(duration)
-	counter := 3
-	for {
-		select {
-		case bid := <-a.bidsChannel:
-			result, err := a.auction.Bid(bid.Bidder, bid.Amount)
-			if err != nil {
-				message := tgbotapi.NewMessage(a.chatID, err.Error())
-				a.send <- message
-				continue
-			}
-			message := tgbotapi.NewMessage(a.chatID, result)
-			a.send <- message
-
-			countDown.Reset(duration)
-			counter = 3
-
-		case <-countDown.C:
-			switch counter {
-			case 3:
-				a.send <- tgbotapi.NewMessage(a.chatID, fmt.Sprintf(messages.COUNTDOWN_THREE_MESSAGE, a.auction.CurrentPrice()))
-			case 2:
-				a.send <- tgbotapi.NewMessage(a.chatID, fmt.Sprintf(messages.COUNTDOWN_TWO_MESSAGE, a.auction.CurrentPrice()))
-			case 1:
-				a.send <- tgbotapi.NewMessage(a.chatID, fmt.Sprintf(messages.COUNTDOWN_ONE_MESSAGE, a.auction.CurrentPrice()))
-			case 0:
-				stopChannel <- fmt.Sprint("Auction ended")
-				return
-			}
-			counter--
-			countDown.Reset(duration)
-		}
-	}
 }
 
 func (a *Auctioneer) Run(receive tgbotapi.UpdatesChannel) {
@@ -109,13 +52,11 @@ func (a *Auctioneer) Run(receive tgbotapi.UpdatesChannel) {
 	startingMessage := tgbotapi.NewMessage(a.chatID, fmt.Sprintf(messages.START_AUCTION_MESSAGE, a.auction.Name(), a.auction.StartPrice(), a.auction.MinStep()))
 	a.send <- startingMessage
 
-	stoppingRuleChannel := make(chan string)
-
-	go a.ReverseAuctionStoppingRule(stoppingRuleChannel)
+	go a.auction.Auctioneer()(a)
 
 	for {
 		select {
-		case <-stoppingRuleChannel:
+		case <-a.stopChannel:
 			activeAuction = nil
 			a.auction.End()
 
@@ -135,7 +76,7 @@ func (a *Auctioneer) Run(receive tgbotapi.UpdatesChannel) {
 
 		case update := <-receive:
 			if update.Message != nil {
-				bid, err := parseBidMessage(update)
+				bid, err := activeAuction.ParseBid(update)
 				if err != nil {
 					message := tgbotapi.NewMessage(update.Message.Chat.ID, messages.INVALID_BID_MESSAGE)
 					message.ReplyToMessageID = update.Message.MessageID

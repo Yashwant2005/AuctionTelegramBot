@@ -3,8 +3,10 @@ package auction
 import (
 	"errors"
 	"fmt"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 type StartAuctionConfig struct {
@@ -21,6 +23,10 @@ func ParseStartAuctionCommand(text string) (StartAuctionConfig, error) {
 		return StartAuctionConfig{}, errors.New(fmt.Sprintf("Start command should be in format %s", StartPattern.String()))
 	}
 	matches := StartPattern.FindStringSubmatch(text)
+	if matches[1] != "reverse_auction" && matches[1] != "special_auction" {
+		return StartAuctionConfig{}, errors.New("Auction type should be reverse_auction or special_auction")
+
+	}
 	startPrice, err := strconv.ParseFloat(matches[3], 64)
 	if err != nil {
 		return StartAuctionConfig{}, err
@@ -37,8 +43,19 @@ func ParseStartAuctionCommand(text string) (StartAuctionConfig, error) {
 	}, nil
 }
 
-type BidResponse struct {
-	Message string
-	Success bool
-	Bid     Bid
+type Bid struct {
+	// Bid ID
+	ID int
+	// AuctionName bidder
+	AuctionName string
+	// Bidder
+	Bidder string
+	// Bid amount
+	Amount float64
+	// Bid status
+	Status string
+	// Bid time
+	Time time.Time
+	// Bid telegram message
+	Update tgbotapi.Update
 }

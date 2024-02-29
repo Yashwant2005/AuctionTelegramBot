@@ -1,5 +1,7 @@
 package auction
 
+import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
 type Auction interface {
 	// Name of auction
 	Name() string
@@ -21,4 +23,8 @@ type Auction interface {
 	WinnerPrice() float64
 	// WriteLog Write log
 	WriteLog()
+	// Auctioneer that will be used to notify about auction events
+	Auctioneer() func(auctioneer *Auctioneer)
+	// ParseBid Parse Bid from string
+	ParseBid(bid tgbotapi.Update) (Bid, error)
 }
