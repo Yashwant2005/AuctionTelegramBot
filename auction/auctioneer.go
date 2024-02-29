@@ -27,6 +27,7 @@ func NewAuctioneer(config StartAuctionConfig, chatID int64, send chan tgbotapi.C
 	case "special_auction":
 		auction = NewSpecialAuction(config.Name, config.StartPrice, config.MinStep)
 	}
+
 	stopChannel := make(chan string)
 	bids := make(chan Bid)
 
@@ -49,7 +50,13 @@ func (a *Auctioneer) Run(receive tgbotapi.UpdatesChannel) {
 	activeAuction = a.auction
 	a.auction.Start()
 
-	startingMessage := tgbotapi.NewMessage(a.chatID, fmt.Sprintf(messages.START_AUCTION_MESSAGE, a.auction.Name(), a.auction.StartPrice(), a.auction.MinStep()))
+	var startingMessage tgbotapi.Chattable
+	switch a.auction.(type) {
+	case *ReverseAuction:
+		startingMessage = tgbotapi.NewMessage(a.chatID, fmt.Sprintf(messages.START_REVERSE_AUCTION_MESSAGE, a.auction.Name(), a.auction.StartPrice(), a.auction.MinStep(), a.auction.Name()))
+	case *SpecialAuction:
+		startingMessage = tgbotapi.NewMessage(a.chatID, fmt.Sprintf(messages.START_SPECIAL_AUCTION_MESSAGE, a.auction.Name(), a.auction.StartPrice(), a.auction.MinStep(), a.auction.Name()))
+	}
 	a.send <- startingMessage
 
 	go a.auction.Auctioneer()(a)
@@ -77,6 +84,7 @@ func (a *Auctioneer) Run(receive tgbotapi.UpdatesChannel) {
 		case update := <-receive:
 			if update.Message != nil {
 				bid, err := activeAuction.ParseBid(update)
+				bid.Update = update
 				if err != nil {
 					message := tgbotapi.NewMessage(update.Message.Chat.ID, messages.INVALID_BID_MESSAGE)
 					message.ReplyToMessageID = update.Message.MessageID
@@ -89,7 +97,7 @@ func (a *Auctioneer) Run(receive tgbotapi.UpdatesChannel) {
 					a.send <- message
 					continue
 				}
-				if update.Message.Chat.ID != a.chatID {
+				if update.Message.Chat.ID != a.chatID && a.auction.IsPrivateAllowed() {
 					message := tgbotapi.NewMessage(update.Message.Chat.ID, messages.INVALID_CHAT_ID_MESSAGE)
 					message.ReplyToMessageID = update.Message.MessageID
 					a.send <- message

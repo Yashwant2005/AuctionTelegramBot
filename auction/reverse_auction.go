@@ -33,6 +33,7 @@ func NewReverseAuction(name string, startPrice float64, minStep float64) Auction
 		Bidder: "System",
 		Amount: startPrice + minStep,
 		Status: "Active",
+		Time:   time.Now(),
 	}
 	return &ReverseAuction{
 		name:         name,
@@ -142,10 +143,12 @@ func (a *ReverseAuction) Auctioneer() func(auctioneer *Auctioneer) {
 				result, err := auctioneer.auction.Bid(bid.Bidder, bid.Amount)
 				if err != nil {
 					message := tgbotapi.NewMessage(auctioneer.chatID, err.Error())
+					message.ReplyToMessageID = bid.Update.Message.MessageID
 					auctioneer.send <- message
 					continue
 				}
 				message := tgbotapi.NewMessage(auctioneer.chatID, result)
+				message.ReplyToMessageID = bid.Update.Message.MessageID
 				auctioneer.send <- message
 
 				countDown.Reset(duration)
@@ -168,4 +171,8 @@ func (a *ReverseAuction) Auctioneer() func(auctioneer *Auctioneer) {
 			}
 		}
 	}
+}
+
+func (a *ReverseAuction) IsPrivateAllowed() bool {
+	return false
 }

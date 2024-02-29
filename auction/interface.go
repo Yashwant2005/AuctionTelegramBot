@@ -27,4 +27,6 @@ type Auction interface {
 	Auctioneer() func(auctioneer *Auctioneer)
 	// ParseBid Parse Bid from string
 	ParseBid(bid tgbotapi.Update) (Bid, error)
+	// IsPrivateAllowed Is private allowed
+	IsPrivateAllowed() bool
 }

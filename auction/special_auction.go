@@ -4,6 +4,8 @@ import (
 	"AuctionBot/messages"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/sirupsen/logrus"
+	"os"
 	"regexp"
 	"time"
 )
@@ -23,6 +25,7 @@ func NewSpecialAuction(name string, startPrice float64, minStep float64) Auction
 		Bidder: "System",
 		Amount: startPrice,
 		Status: "Active",
+		Time:   time.Now(),
 	}
 	return &SpecialAuction{
 		name:         name,
@@ -67,6 +70,7 @@ func (a *SpecialAuction) Bid(bidder string, amount float64) (string, error) {
 		Bidder: bidder,
 		Amount: amount,
 		Status: "Active",
+		Time:   time.Now(),
 	}
 
 	a.history[len(a.history)-1].Status = "Inactive"
@@ -87,7 +91,17 @@ func (a *SpecialAuction) WinnerPrice() float64 {
 }
 
 func (a *SpecialAuction) WriteLog() {
-	// Write log
+	name := fmt.Sprintf("./log/%s-%s.log", time.Now().Format("2006-01-02-15-04-05"), a.Name())
+	file, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		logrus.Warn("could not open log file")
+	}
+	defer file.Close()
+	for _, bid := range a.history {
+		file.WriteString(fmt.Sprintf("%s %s %f %s\n", bid.Time.Format("2006-01-02-15-04-05"), bid.Bidder, bid.Amount, bid.Status))
+	}
+	file.WriteString(fmt.Sprintf("Winner: %s\n", a.history[len(a.history)-1].Bidder))
+	file.WriteString(fmt.Sprintf("Winner price: %f\n", a.history[len(a.history)-1].Amount))
 }
 
 var specialAuctionBidPattern = regexp.MustCompile(`^/bid (\w+)$`)
@@ -121,9 +135,16 @@ func (a *SpecialAuction) Auctioneer() func(auctioneer *Auctioneer) {
 				auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.SPECIAL_AUCTION_PRICE_RAISED_MESSAGE, a.CurrentPrice()))
 			case bid := <-auctioneer.bidsChannel:
 				a.Bid(bid.Bidder, a.CurrentPrice())
+				message := tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.SPECIAL_AUCTION_BID_ACCEPTED_MESSAGE, bid.Bidder))
+				message.ReplyToMessageID = bid.Update.Message.MessageID
+				auctioneer.send <- message
 				auctioneer.stopChannel <- "Auction finished"
 				return
 			}
 		}
 	}
+}
+
+func (a *SpecialAuction) IsPrivateAllowed() bool {
+	return false
 }
