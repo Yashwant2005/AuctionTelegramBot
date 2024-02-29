@@ -43,7 +43,11 @@ func TestReverseAuction(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := auction.Bid(test.bidder, test.amount)
+		bid := Bid{
+			Bidder: test.bidder,
+			Amount: test.amount,
+		}
+		_, err := auction.Bid(bid)
 		if test.expectedError {
 			require.NotNil(t, err)
 		} else {

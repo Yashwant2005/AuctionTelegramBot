@@ -12,13 +12,13 @@ type Auction interface {
 	// StartingMessage Starting message
 	StartingMessage() string
 	// Bid in auction
-	Bid(bidder string, amount float64) (string, error)
+	Bid(bid Bid) (string, error)
 	// Winner of auction
 	Winner() string
 	// WinnerPrice Winner price
 	WinnerPrice() float64
 	// WriteLog Write log
-	WriteLog()
+	WriteLog(name string)
 	// Auctioneer that will be used to notify about auction events
 	Auctioneer() func(auctioneer *Auctioneer)
 	// ParseBid Parse Bid from string
