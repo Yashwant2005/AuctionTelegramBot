@@ -27,6 +27,15 @@ func init() {
 	}
 }
 
+func Raven(bot *tgbotapi.BotAPI, messages chan tgbotapi.Chattable) {
+	for {
+		select {
+		case message := <-messages:
+			bot.Send(message)
+		}
+	}
+}
+
 func main() {
 	token := viper.GetString("bot_token")
 	bot, err := tgbotapi.NewBotAPI(token)
@@ -44,17 +53,12 @@ func main() {
 
 	var numThreads = 10
 
+	mainMessages := make(chan tgbotapi.Chattable)
 	auctioneerMessages := make(chan tgbotapi.Chattable, numThreads)
 
+	go Raven(bot, mainMessages)
 	for i := 0; i < numThreads; i++ {
-		go func(messages chan tgbotapi.Chattable) {
-			for {
-				select {
-				case message := <-messages:
-					bot.Send(message)
-				}
-			}
-		}(auctioneerMessages)
+		go Raven(bot, auctioneerMessages)
 	}
 
 	var adminUserLists = viper.GetStringSlice("admin_usernames")
@@ -73,20 +77,20 @@ func main() {
 					if !IsAdmin(sender, adminUserLists) {
 						message := tgbotapi.NewMessage(chatID, messages.NOT_ADMIN_MESSAGE)
 						message.ReplyToMessageID = update.Message.MessageID
-						bot.Send(message)
+						mainMessages <- message
 						continue
 					}
 					if auction.GetActiveAuction() != nil {
 						message := tgbotapi.NewMessage(chatID, messages.ACTIVE_AUCTION_EXISTS_MESSAGE)
 						message.ReplyToMessageID = update.Message.MessageID
-						bot.Send(message)
+						mainMessages <- message
 						continue
 					}
 					startConfig, err := auction.ParseStartAuctionCommand(update.Message.Text)
 					if err != nil {
 						message := tgbotapi.NewMessage(chatID, messages.INVALID_START_MESSAGE)
 						message.ReplyToMessageID = update.Message.MessageID
-						bot.Send(message)
+						mainMessages <- message
 						continue
 					}
 
@@ -99,13 +103,13 @@ func main() {
 					} else {
 						message := tgbotapi.NewMessage(chatID, messages.NO_ACTIVE_AUCTION_MESSAGE)
 						message.ReplyToMessageID = update.Message.MessageID
-						bot.Send(message)
+						mainMessages <- message
 					}
 
 				case "help":
 					message := tgbotapi.NewMessage(chatID, messages.HELP_MESSAGE)
 					message.ReplyToMessageID = update.Message.MessageID
-					bot.Send(message)
+					mainMessages <- message
 				}
 			}
 		}
