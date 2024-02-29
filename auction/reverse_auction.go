@@ -136,7 +136,7 @@ func (a *ReverseAuction) ParseBid(update tgbotapi.Update) (Bid, error) {
 
 func (a *ReverseAuction) Auctioneer() func(auctioneer *Auctioneer) {
 	return func(auctioneer *Auctioneer) {
-		duration := 5 * time.Second
+		duration := 15 * time.Second
 
 		countDown := time.NewTimer(duration)
 		defer countDown.Stop()

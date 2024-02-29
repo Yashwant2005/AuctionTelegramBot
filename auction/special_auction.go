@@ -115,7 +115,7 @@ func (a *SpecialAuction) ParseBid(update tgbotapi.Update) (Bid, error) {
 
 func (a *SpecialAuction) Auctioneer() func(auctioneer *Auctioneer) {
 	return func(auctioneer *Auctioneer) {
-		duration := 5 * time.Second
+		duration := 15 * time.Second
 
 		ticker := time.NewTicker(duration)
 		defer ticker.Stop()
