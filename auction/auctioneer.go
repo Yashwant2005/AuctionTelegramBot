@@ -25,8 +25,8 @@ func NewAuctioneer(config StartAuctionConfig, chatID int64, send chan tgbotapi.C
 	switch config.Type {
 	case "reverse_auction":
 		auction = NewReverseAuction(config.Name, config.StartPrice, config.MinStep)
-	case "special_auction":
-		auction = NewSpecialAuction(config.Name, config.StartPrice, config.MinStep)
+	case "dutch_reverse_auction":
+		auction = NewDutchReverseAuction(config.Name, config.StartPrice, config.MinStep)
 	case "sealed_bid_auction":
 		auction = NewSealedBidAuction(config.Name)
 	}

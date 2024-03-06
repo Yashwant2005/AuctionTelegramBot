@@ -18,7 +18,7 @@ type StartAuctionConfig struct {
 }
 
 var startReversePattern = regexp.MustCompile(`^/start (\w+) (\w+) (\d+(\.\d+)?) (\d+(\.\d+)?)$`)
-var startSpecialPattern = regexp.MustCompile(`^/start (\w+) (\w+) (\d+(\.\d+)?) (\d+(\.\d+)?)$`)
+var startDutchReversePattern = regexp.MustCompile(`^/start (\w+) (\w+) (\d+(\.\d+)?) (\d+(\.\d+)?)$`)
 var startSealedBidPattern = regexp.MustCompile(`^/start (\w+) (\w+)$`)
 
 func ParseStartAuctionCommand(text string) (StartAuctionConfig, error) {
@@ -27,19 +27,19 @@ func ParseStartAuctionCommand(text string) (StartAuctionConfig, error) {
 	switch auctionType {
 	case "reverse_auction":
 		startPattern = startReversePattern
-	case "special_auction":
-		startPattern = startSpecialPattern
+	case "dutch_reverse_auction":
+		startPattern = startDutchReversePattern
 	case "sealed_bid_auction":
 		startPattern = startSealedBidPattern
 	default:
-		return StartAuctionConfig{}, errors.New("auction type should be reverse_auction or special_auction or sealed_bid_auction")
+		return StartAuctionConfig{}, errors.New("auction type should be reverse_auction or dutch_reverse_auction or sealed_bid_auction")
 	}
 	if !startPattern.MatchString(text) {
 		return StartAuctionConfig{}, errors.New(fmt.Sprintf("Start command should be in format %s", startPattern.String()))
 	}
 	matches := startPattern.FindStringSubmatch(text)
 	switch auctionType {
-	case "reverse_auction", "special_auction":
+	case "reverse_auction", "dutch_reverse_auction":
 		startPrice, _ := strconv.ParseFloat(matches[3], 64)
 		minStep, _ := strconv.ParseFloat(matches[5], 64)
 
@@ -55,7 +55,7 @@ func ParseStartAuctionCommand(text string) (StartAuctionConfig, error) {
 			Name: matches[2],
 		}, nil
 	default:
-		return StartAuctionConfig{}, errors.New("auction type should be reverse_auction or special_auction or sealed_bid_auction")
+		return StartAuctionConfig{}, errors.New("auction type should be reverse_auction or dutch_reverse_auction or sealed_bid_auction")
 	}
 }
 

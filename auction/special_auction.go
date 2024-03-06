@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type SpecialAuction struct {
+type DutchReverseAuction struct {
 	name         string
 	startPrice   float64
 	currentPrice float64
@@ -19,14 +19,14 @@ type SpecialAuction struct {
 	history      []Bid
 }
 
-func NewSpecialAuction(name string, startPrice float64, minStep float64) Auction {
+func NewDutchReverseAuction(name string, startPrice float64, minStep float64) Auction {
 	bid := Bid{
 		ID:     1,
 		Bidder: "System",
 		Amount: startPrice,
 		Time:   time.Now(),
 	}
-	return &SpecialAuction{
+	return &DutchReverseAuction{
 		name:         name,
 		startPrice:   startPrice,
 		currentPrice: startPrice,
@@ -36,52 +36,52 @@ func NewSpecialAuction(name string, startPrice float64, minStep float64) Auction
 	}
 }
 
-func (a *SpecialAuction) Name() string {
+func (a *DutchReverseAuction) Name() string {
 	return a.name
 }
 
-func (a *SpecialAuction) StartPrice() float64 {
+func (a *DutchReverseAuction) StartPrice() float64 {
 	return a.startPrice
 }
 
-func (a *SpecialAuction) StartingMessage() string {
-	return fmt.Sprintf(messages.START_SPECIAL_AUCTION_MESSAGE, a.Name(), a.StartPrice(), a.MinStep(), a.Name())
+func (a *DutchReverseAuction) StartingMessage() string {
+	return fmt.Sprintf(messages.START_DUTCH_REVERSE_AUCTION_MESSAGE, a.Name(), a.StartPrice(), a.MinStep(), a.Name())
 }
 
-func (a *SpecialAuction) CurrentPrice() float64 {
+func (a *DutchReverseAuction) CurrentPrice() float64 {
 	return a.currentPrice
 }
 
-func (a *SpecialAuction) MinStep() float64 {
+func (a *DutchReverseAuction) MinStep() float64 {
 	return a.minStep
 }
 
-func (a *SpecialAuction) Start() {
+func (a *DutchReverseAuction) Start() {
 	a.status = "Started"
 }
 
-func (a *SpecialAuction) End() {
+func (a *DutchReverseAuction) End() {
 	a.status = "Finished"
 }
 
-func (a *SpecialAuction) Bid(bid Bid) (string, error) {
+func (a *DutchReverseAuction) Bid(bid Bid) (string, error) {
 	a.history = append(a.history, bid)
 	a.currentPrice = bid.Amount
 
 	return fmt.Sprintf(messages.ACCEPTED_BID_MESSAGE, bid.Bidder, bid.Amount), nil
 }
 
-func (a *SpecialAuction) Winner() string {
+func (a *DutchReverseAuction) Winner() string {
 	winner := a.history[len(a.history)-1].Bidder
 	return winner
 }
 
-func (a *SpecialAuction) WinnerPrice() float64 {
+func (a *DutchReverseAuction) WinnerPrice() float64 {
 	winnerPrice := a.history[len(a.history)-1].Amount
 	return winnerPrice
 }
 
-func (a *SpecialAuction) WriteLog(name string) {
+func (a *DutchReverseAuction) WriteLog(name string) {
 	file, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		logrus.Warn("could not open log file")
@@ -94,16 +94,16 @@ func (a *SpecialAuction) WriteLog(name string) {
 	file.WriteString(fmt.Sprintf("Winner price: %f\n", a.history[len(a.history)-1].Amount))
 }
 
-var specialAuctionBidPattern = regexp.MustCompile(`^/bid (\w+)$`)
+var dutchReverseAuctionBidPattern = regexp.MustCompile(`^/bid (\w+)$`)
 
-func (a *SpecialAuction) ParseBid(update tgbotapi.Update) (Bid, error) {
+func (a *DutchReverseAuction) ParseBid(update tgbotapi.Update) (Bid, error) {
 	text := update.Message.Text
 
-	if !specialAuctionBidPattern.MatchString(text) {
-		return Bid{}, fmt.Errorf("bid command should be in format %s", specialAuctionBidPattern.String())
+	if !dutchReverseAuctionBidPattern.MatchString(text) {
+		return Bid{}, fmt.Errorf("bid command should be in format %s", dutchReverseAuctionBidPattern.String())
 	}
 
-	matches := specialAuctionBidPattern.FindStringSubmatch(text)
+	matches := dutchReverseAuctionBidPattern.FindStringSubmatch(text)
 	auctionName := matches[1]
 	return Bid{
 		AuctionName: auctionName,
@@ -113,7 +113,7 @@ func (a *SpecialAuction) ParseBid(update tgbotapi.Update) (Bid, error) {
 	}, nil
 }
 
-func (a *SpecialAuction) Auctioneer() func(auctioneer *Auctioneer) {
+func (a *DutchReverseAuction) Auctioneer() func(auctioneer *Auctioneer) {
 	return func(auctioneer *Auctioneer) {
 		duration := 15 * time.Second
 
@@ -129,10 +129,10 @@ func (a *SpecialAuction) Auctioneer() func(auctioneer *Auctioneer) {
 					Time:   time.Now(),
 				}
 				a.Bid(bid)
-				auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.SPECIAL_AUCTION_PRICE_RAISED_MESSAGE, a.CurrentPrice()))
+				auctioneer.send <- tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.DUTCH_REVERSE_AUCTION_PRICE_RAISED_MESSAGE, a.CurrentPrice()))
 			case bid := <-auctioneer.bidsChannel:
 				a.Bid(bid)
-				message := tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.SPECIAL_AUCTION_BID_ACCEPTED_MESSAGE, bid.Bidder))
+				message := tgbotapi.NewMessage(auctioneer.chatID, fmt.Sprintf(messages.DUTCH_REVERSE_AUCTION_BID_ACCEPTED_MESSAGE, bid.Bidder))
 				message.ReplyToMessageID = bid.Update.Message.MessageID
 				auctioneer.send <- message
 				auctioneer.stopChannel <- "Auction finished"
@@ -142,6 +142,6 @@ func (a *SpecialAuction) Auctioneer() func(auctioneer *Auctioneer) {
 	}
 }
 
-func (a *SpecialAuction) IsPrivateAllowed() bool {
+func (a *DutchReverseAuction) IsPrivateAllowed() bool {
 	return false
 }
