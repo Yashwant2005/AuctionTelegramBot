@@ -70,7 +70,7 @@ func (a *Auctioneer) Run(receive tgbotapi.UpdatesChannel) {
 			message := tgbotapi.NewMessage(a.chatID, messageText)
 			a.send <- message
 
-			file := tgbotapi.FilePath("./media/leonardo-dicaprio-sold-gif.mp4")
+			file := tgbotapi.FilePath("./media/sold-gif-2.mp4")
 			gif := tgbotapi.NewAnimation(a.chatID, file)
 			a.send <- gif
 

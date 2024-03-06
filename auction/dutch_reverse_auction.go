@@ -115,7 +115,7 @@ func (a *DutchReverseAuction) ParseBid(update tgbotapi.Update) (Bid, error) {
 
 func (a *DutchReverseAuction) Auctioneer() func(auctioneer *Auctioneer) {
 	return func(auctioneer *Auctioneer) {
-		duration := 15 * time.Second
+		duration := 10 * time.Second
 
 		ticker := time.NewTicker(duration)
 		defer ticker.Stop()
