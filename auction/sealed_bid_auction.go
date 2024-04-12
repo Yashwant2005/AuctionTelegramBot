@@ -107,7 +107,7 @@ func (a *SealedBidAuction) WriteLog(name string) {
 	file.WriteString(fmt.Sprintf("Winner price: %f\n", a.WinnerPrice()))
 }
 
-var sealedBidAuctionBidPattern = regexp.MustCompile(`^/bid (\w+) (\d+(\.\d+)?)$`)
+var sealedBidAuctionBidPattern = regexp.MustCompile(`^/bid (\w+) (\d+(\.\d{1,3})?)$`)
 
 func (a *SealedBidAuction) ParseBid(update tgbotapi.Update) (Bid, error) {
 	text := update.Message.Text
