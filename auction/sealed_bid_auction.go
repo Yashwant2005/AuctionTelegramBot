@@ -129,7 +129,7 @@ func (a *SealedBidAuction) ParseBid(update tgbotapi.Update) (Bid, error) {
 
 func (a *SealedBidAuction) Auctioneer() func(auctioneer *Auctioneer) {
 	return func(auctioneer *Auctioneer) {
-		duration := 30 * time.Second
+		duration := 60 * time.Second
 
 		countDown := time.NewTimer(duration)
 		defer countDown.Stop()
